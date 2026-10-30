@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="290" viewBox="0 0 1200 290">
+<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#7C5CFF"/><stop offset="1" stop-color="#22D3EE"/></linearGradient>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+<style>
+ .dash{stroke-dasharray:6 8;animation:dash 1.2s linear infinite} @keyframes dash{to{stroke-dashoffset:-14}}
+ .p1{animation:p1 3.6s cubic-bezier(.6,0,.4,1) infinite} @keyframes p1{0%{transform:translateX(0);opacity:0}8%{opacity:1}38%{transform:translateX(180px);opacity:1}42%,100%{transform:translateX(180px);opacity:0}}
+ .p2{animation:p2 3.6s cubic-bezier(.6,0,.4,1) infinite} @keyframes p2{0%,40%{transform:translateX(0);opacity:0}46%{opacity:1}72%{transform:translateX(180px);opacity:1}76%,100%{transform:translateX(180px);opacity:0}}
+ .ok{opacity:0;animation:ok 3.6s ease infinite} @keyframes ok{0%,76%{opacity:0;transform:translateY(6px)}82%,96%{opacity:1;transform:none}100%{opacity:0}}
+</style>
+<rect width="1200" height="290" rx="20" fill="#111521"/>
+<g><rect x="60" y="70" width="280" height="96" rx="18" fill="#121722" stroke="#262C3B"/>
+ <rect x="82" y="92" width="44" height="44" rx="12" fill="url(#g)" opacity=".14"/>
+ <text x="104" y="122" text-anchor="middle" font-size="20" fill="#7C5CFF" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">✎</text>
+ <text x="142" y="112" font-size="20" font-weight="700" fill="#F2F4F8" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif">AI agent</text>
+ <text x="142" y="136" font-size="14" fill="#8A93A6" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif">signs with its wallet</text></g>
+<g><rect x="460" y="70" width="280" height="96" rx="18" fill="#121722" stroke="#262C3B"/>
+ <rect x="482" y="92" width="44" height="44" rx="12" fill="url(#g)" opacity=".14"/>
+ <text x="504" y="122" text-anchor="middle" font-size="20" fill="#7C5CFF" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">{ }</text>
+ <text x="542" y="112" font-size="20" font-weight="700" fill="#F2F4F8" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif">Your API</text>
+ <text x="542" y="136" font-size="14" fill="#8A93A6" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif">checks the signature</text></g>
+<g><rect x="860" y="70" width="280" height="96" rx="18" fill="#121722" stroke="#262C3B"/>
+ <rect x="882" y="92" width="44" height="44" rx="12" fill="url(#g)" opacity=".14"/>
+ <text x="904" y="122" text-anchor="middle" font-size="20" fill="#7C5CFF" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">⛓</text>
+ <text x="942" y="112" font-size="20" font-weight="700" fill="#F2F4F8" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif">Identity Registry</text>
+ <text x="942" y="136" font-size="14" fill="#8A93A6" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif">ERC-8004 · on chain</text></g>
+<path class="dash" d="M350 118H450" stroke="#8A93A6" stroke-width="2" fill="none"/>
+<path class="dash" d="M750 118H850" stroke="#8A93A6" stroke-width="2" fill="none"/>
+<g class="p1"><circle cx="350" cy="118" r="9" fill="#7C5CFF" filter="url(#glow)"/><circle cx="350" cy="118" r="5" fill="#7C5CFF"/></g>
+<g class="p2"><circle cx="750" cy="118" r="9" fill="#22D3EE" filter="url(#glow)"/><circle cx="750" cy="118" r="5" fill="#22D3EE"/></g>
+<text x="400" y="104" text-anchor="middle" font-size="13" fill="#8A93A6" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">signed request</text>
+<text x="800" y="104" text-anchor="middle" font-size="13" fill="#8A93A6" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">eth_call</text>
+<g style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#8A93A6">
+ <text x="82" y="206">method · url · body · nonce</text>
+ <text x="482" y="206">ownerOf · getAgentWallet</text>
+ <text x="882" y="206">ERC-1271 for smart wallets</text>
+</g>
+<g class="ok"><rect x="460" y="232" width="280" height="34" rx="17" fill="#34D399" opacity=".14"/>
+ <text x="600" y="254" text-anchor="middle" font-size="15" font-weight="700" fill="#34D399" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif">✓ verified · role: agent_wallet</text></g>
+</svg>
