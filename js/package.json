@@ -1,0 +1,15 @@
+{
+  "name": "erc8004-agent-auth",
+  "version": "0.1.0",
+  "description": "Sign and verify HTTP requests from ERC-8004 AI agents against the canonical on-chain Identity Registry.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src", "README.md"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "keywords": ["erc-8004", "ai-agents", "ethereum", "authentication", "know-your-agent", "x402"],
+  "license": "MIT",
+  "peerDependencies": { "ethers": "^6.13.0" },
+  "devDependencies": { "ethers": "6.17.0" }
+}

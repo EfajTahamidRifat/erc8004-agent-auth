@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "erc8004-agent-auth"
+version = "0.1.0"
+description = "Sign and verify HTTP requests from ERC-8004 AI agents against the canonical on-chain Identity Registry."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = ["eth-account>=0.11", "eth-abi>=5", "eth-utils>=4"]
+keywords = ["erc-8004", "ai-agents", "ethereum", "authentication", "know-your-agent", "x402"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Security :: Cryptography",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.urls]
+Specification = "https://github.com/EfajTahamidRifat/erc8004-agent-auth/blob/main/SPEC.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]

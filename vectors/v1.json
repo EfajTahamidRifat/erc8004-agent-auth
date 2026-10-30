@@ -1,0 +1,114 @@
+{
+  "protocol": "erc8004-agent-auth/1",
+  "note": "Public test keys only. timestamp 1767225600, nonces fixed.",
+  "url_normalization": [
+    {
+      "input": "https://Example.COM",
+      "output": "https://example.com/"
+    },
+    {
+      "input": "http://a.io:80/x?b=2&a=1",
+      "output": "http://a.io/x?b=2&a=1"
+    },
+    {
+      "input": "https://a.io:8443/p#f",
+      "output": "https://a.io:8443/p"
+    },
+    {
+      "input": "https://a.io/%7Euser",
+      "output": "https://a.io/%7Euser"
+    }
+  ],
+  "requests": [
+    {
+      "agent": "eip155:8453:1203",
+      "method": "GET",
+      "url": "https://api.example.com/v1/quote?pair=ETH-USDC",
+      "body": "",
+      "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "timestamp": 1767225600,
+      "nonce": "vector-nonce-0000-abcdef",
+      "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "message": "erc8004-agent-auth/1\nagent: eip155:8453:1203\nmethod: GET\nurl: https://api.example.com/v1/quote?pair=ETH-USDC\ntimestamp: 1767225600\nnonce: vector-nonce-0000-abcdef\nbody-sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers": {
+        "ERC8004-Agent": "eip155:8453:1203",
+        "ERC8004-Timestamp": "1767225600",
+        "ERC8004-Nonce": "vector-nonce-0000-abcdef",
+        "ERC8004-Signature": "0x97446a718a0d9fef5e698ab81bd7e0b5dafa260f1fb0d8d36618b2ee9786809125ac2b6914d8606f03b55cb7f4014da555eea68bcc574f236ec17f40d8c9d6cf1c"
+      }
+    },
+    {
+      "agent": "eip155:1:7",
+      "method": "post",
+      "url": "HTTPS://API.Example.com:443/orders#frag",
+      "body": "{\"amount\":\"10\",\"asset\":\"USDC\"}",
+      "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "timestamp": 1767225601,
+      "nonce": "vector-nonce-0001-abcdef",
+      "body_sha256": "5ab5061896254f08dfc4bd3184db3b024e1b9c6744c016f61acddfb1a1a59770",
+      "message": "erc8004-agent-auth/1\nagent: eip155:1:7\nmethod: POST\nurl: https://api.example.com/orders\ntimestamp: 1767225601\nnonce: vector-nonce-0001-abcdef\nbody-sha256: 5ab5061896254f08dfc4bd3184db3b024e1b9c6744c016f61acddfb1a1a59770",
+      "headers": {
+        "ERC8004-Agent": "eip155:1:7",
+        "ERC8004-Timestamp": "1767225601",
+        "ERC8004-Nonce": "vector-nonce-0001-abcdef",
+        "ERC8004-Signature": "0x05d2d8fd1a9d767f2aaac00483ac9aafa3f115c3f387518c004a0c027d0b0b5d46c1543f32409aa9abe0bf8438536cc21236ebdead2a9ce4abcaf5c79eeb48901c"
+      }
+    },
+    {
+      "agent": "eip155:8453:42",
+      "method": "PUT",
+      "url": "http://localhost:8080",
+      "body": "hello",
+      "private_key": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "timestamp": 1767225602,
+      "nonce": "vector-nonce-0002-abcdef",
+      "body_sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+      "message": "erc8004-agent-auth/1\nagent: eip155:8453:42\nmethod: PUT\nurl: http://localhost:8080/\ntimestamp: 1767225602\nnonce: vector-nonce-0002-abcdef\nbody-sha256: 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+      "headers": {
+        "ERC8004-Agent": "eip155:8453:42",
+        "ERC8004-Timestamp": "1767225602",
+        "ERC8004-Nonce": "vector-nonce-0002-abcdef",
+        "ERC8004-Signature": "0x61aa3565f0bdb1e455ec1f324bd933505ed64c29559ae62a035b838b6a4d7df01eb32b4fa9515f79ebe440a8c959c7a0b8a113dd7851e2bdf2bd8fa0b1fb5f621b"
+      }
+    },
+    {
+      "agent": "eip155:84532:999999",
+      "method": "DELETE",
+      "url": "https://[2001:DB8::1]:8443/a%20b/c?x=1&y=%2F",
+      "body": "",
+      "private_key": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "timestamp": 1767225603,
+      "nonce": "vector-nonce-0003-abcdef",
+      "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "message": "erc8004-agent-auth/1\nagent: eip155:84532:999999\nmethod: DELETE\nurl: https://[2001:db8::1]:8443/a%20b/c?x=1&y=%2F\ntimestamp: 1767225603\nnonce: vector-nonce-0003-abcdef\nbody-sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers": {
+        "ERC8004-Agent": "eip155:84532:999999",
+        "ERC8004-Timestamp": "1767225603",
+        "ERC8004-Nonce": "vector-nonce-0003-abcdef",
+        "ERC8004-Signature": "0x3d1b2e7a04ff8162b559224510d3e04050ad328fe9aa585a827c50ad5de3a45b22d5b78b51a62645c06cb33bbfb3469dacabf7a85b4648a8dc409732554b9f101b"
+      }
+    },
+    {
+      "agent": "eip155:10:0",
+      "method": "PATCH",
+      "url": "https://example.org/%C3%BCber?q=%C3%A9",
+      "body": "ünïcödé ✓",
+      "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "timestamp": 1767225604,
+      "nonce": "vector-nonce-0004-abcdef",
+      "body_sha256": "aec840a69bab19009d54142263564850641d84635514a193da3948f5de76178c",
+      "message": "erc8004-agent-auth/1\nagent: eip155:10:0\nmethod: PATCH\nurl: https://example.org/%C3%BCber?q=%C3%A9\ntimestamp: 1767225604\nnonce: vector-nonce-0004-abcdef\nbody-sha256: aec840a69bab19009d54142263564850641d84635514a193da3948f5de76178c",
+      "headers": {
+        "ERC8004-Agent": "eip155:10:0",
+        "ERC8004-Timestamp": "1767225604",
+        "ERC8004-Nonce": "vector-nonce-0004-abcdef",
+        "ERC8004-Signature": "0xfb0022028609c4dca1f3e65495d80dba55abda3a32051cbc20d9437a6f90da94308804889be44b427b966f148686ad4480f9dece254ed742fac51dc9067a37761c"
+      }
+    }
+  ]
+}
