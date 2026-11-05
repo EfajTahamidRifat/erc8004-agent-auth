@@ -184,6 +184,33 @@ Every result tells you exactly what happened:
 }
 ```
 
+## 🔗 Delegation chains <sup>new in 0.2</sup>
+
+When one agent hires another, the hired agent can prove **who it is working for**. Agent A signs a short,
+expiring delegation to agent B (limited to a URL prefix and HTTP methods), and B attaches it to its requests.
+Chains can go up to 4 hops (A → B → C → D), and every hop is checked against the Identity Registry.
+
+```python
+from erc8004_agent_auth import sign_delegation, sign_request, join_chain
+
+# Agent A (eip155:8453:1203) lets agent B (eip155:8453:77) call one API for an hour
+token = sign_delegation(A_KEY, "eip155:8453:1203", "eip155:8453:77",
+                        scope="https://api.example.com/v1/", methods="POST", lifetime=3600)
+
+headers = sign_request(B_KEY, "eip155:8453:77", "POST", url, body)
+headers["ERC8004-Delegation"] = join_chain([token])
+```
+
+The verifier's result then says who the request is really for:
+
+```jsonc
+{ "ok": true, "agent": "eip155:8453:77", "principal": "eip155:8453:1203",
+  "delegation_chain": ["eip155:8453:1203", "eip155:8453:77"] }
+```
+
+Delegations expire (30 days at most), can be limited to a URL prefix and methods, and can be revoked with your own
+deny-list through the `is_revoked` hook. Full rules: [SPEC.md §8](SPEC.md#8-delegation-chains--erc8004-delegation1).
+
 ## 🔍 How verification works
 
 ```mermaid
@@ -249,6 +276,7 @@ Found a problem? Please open a private security advisory on this repo rather tha
 - [x] `erc8004-agent-auth/1` spec draft
 - [x] Python and JavaScript reference libraries
 - [x] Shared test vectors and CI on 3 Python and 3 Node versions
+- [x] Delegation chains (`erc8004-delegation/1`): agents acting for other agents, verified at every hop
 - [ ] Framework middleware: FastAPI, Express/Hono, Next.js, plus an MCP-server helper
 - [ ] Live integration tests against the Base and Ethereum mainnet registries, plus Foundry fork tests for ERC-1271
 - [ ] Multi-RPC quorum reads and caching, so one bad RPC can't lie about an agent

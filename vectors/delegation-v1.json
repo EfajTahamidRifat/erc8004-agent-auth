@@ -1,0 +1,52 @@
+{
+  "protocol": "erc8004-delegation/1",
+  "note": "Public test keys only. Tokens are base64url JSON without padding.",
+  "delegations": [
+    {
+      "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "input": {
+        "frm": "eip155:8453:1203",
+        "to": "eip155:8453:77",
+        "scope": "https://API.example.com:443/v1/",
+        "methods": "post,get",
+        "not_after": 1767229200,
+        "nonce": "delegation-nonce-0000"
+      },
+      "message": "erc8004-delegation/1\nfrom: eip155:8453:1203\nto: eip155:8453:77\nscope: https://api.example.com/v1/\nmethods: GET,POST\nnot-after: 1767229200\nnonce: delegation-nonce-0000",
+      "token": "eyJmcm9tIjoiZWlwMTU1Ojg0NTM6MTIwMyIsIm1ldGhvZHMiOiJHRVQsUE9TVCIsIm5vbmNlIjoiZGVsZWdhdGlvbi1ub25jZS0wMDAwIiwibm90X2FmdGVyIjoxNzY3MjI5MjAwLCJzY29wZSI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3YxLyIsInNpZ25hdHVyZSI6IjB4ZDE0Mjk0NTQ0NjYyMzg1MjdmZGE5MWRmM2I4YzkyN2JlNzU4Mzg1ODBhNDc3MWEwYTM4OThjYTIzMDkyZmUwODAwZmEwZGYwOGQ3Njg5Mzc1MTg1NDBkZGYwMDRjNDBkZjdiZDIzZmMzNjI0OGVmYjUxODk1M2RjYmE3OTY0OTkxYyIsInRvIjoiZWlwMTU1Ojg0NTM6NzcifQ",
+      "decoded": {
+        "from": "eip155:8453:1203",
+        "methods": "GET,POST",
+        "nonce": "delegation-nonce-0000",
+        "not_after": 1767229200,
+        "scope": "https://api.example.com/v1/",
+        "signature": "0xd1429454466238527fda91df3b8c927be75838580a4771a0a3898ca23092fe0800fa0df08d768937518540ddf004c40df7bd23fc36248efb518953dcba7964991c",
+        "to": "eip155:8453:77"
+      }
+    },
+    {
+      "private_key": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "input": {
+        "frm": "eip155:8453:77",
+        "to": "eip155:1:7",
+        "scope": "*",
+        "methods": "*",
+        "not_after": 1767232800,
+        "nonce": "delegation-nonce-0001"
+      },
+      "message": "erc8004-delegation/1\nfrom: eip155:8453:77\nto: eip155:1:7\nscope: *\nmethods: *\nnot-after: 1767232800\nnonce: delegation-nonce-0001",
+      "token": "eyJmcm9tIjoiZWlwMTU1Ojg0NTM6NzciLCJtZXRob2RzIjoiKiIsIm5vbmNlIjoiZGVsZWdhdGlvbi1ub25jZS0wMDAxIiwibm90X2FmdGVyIjoxNzY3MjMyODAwLCJzY29wZSI6IioiLCJzaWduYXR1cmUiOiIweGFkMDc1MjgzZWEyODA3NmY4MjQ2ZWY1ZmRlZGIyOTg4ODEyOGEwZmY2MTE5MTRkNDFjMzM5MTM2MWI5OTI2YzQxNjYyYmYzNGMxNjQ4ZWEzNzRhNzdlYTJhMTBiNDU4NjRlOWE1YmZhMmNmNTFjNGI2YzU0Y2RiZjQyOWQ5ODVhMWIiLCJ0byI6ImVpcDE1NToxOjcifQ",
+      "decoded": {
+        "from": "eip155:8453:77",
+        "methods": "*",
+        "nonce": "delegation-nonce-0001",
+        "not_after": 1767232800,
+        "scope": "*",
+        "signature": "0xad075283ea28076f8246ef5fdedb29888128a0ff611914d41c3391361b9926c41662bf34c1648ea374a77ea2a10b45864e9a5bfa2cf51c4b6c54cdbf429d985a1b",
+        "to": "eip155:1:7"
+      }
+    }
+  ]
+}

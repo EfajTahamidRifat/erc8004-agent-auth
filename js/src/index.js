@@ -1,7 +1,7 @@
 // Sign and verify HTTP requests from ERC-8004 AI agents against the canonical on-chain Identity Registry.
 // Spec: ../SPEC.md (erc8004-agent-auth/1). Works in Node 18+, Deno, Bun, browsers and edge runtimes.
-import { AbiCoder, Wallet, getAddress, getBytes, hashMessage, hexlify, id, randomBytes, recoverAddress,
-  sha256, toUtf8Bytes, ZeroAddress } from "ethers";
+import { AbiCoder, Wallet, decodeBase64, encodeBase64, getAddress, getBytes, hashMessage, hexlify, id, randomBytes,
+  recoverAddress, sha256, toUtf8Bytes, toUtf8String, ZeroAddress } from "ethers";
 
 export const PROTOCOL = "erc8004-agent-auth/1";
 export const HEADERS = { agent: "ERC8004-Agent", timestamp: "ERC8004-Timestamp", nonce: "ERC8004-Nonce",
@@ -186,6 +186,93 @@ export function readHeaders(headers) {
   }));
 }
 
+export function readDelegation(headers) {
+  const v = typeof headers?.get === "function" ? headers.get(DELEGATION_HEADER)
+    : Object.entries(headers ?? {}).find(([k]) => k.toLowerCase() === DELEGATION_HEADER.toLowerCase())?.[1];
+  if (v === undefined || v === null || v === "") return null;
+  return String(Array.isArray(v) ? v.join(",") : v);
+}
+
+// ── delegation chains (erc8004-delegation/1) ─────────────────────────
+export const DELEGATION_PROTOCOL = "erc8004-delegation/1";
+export const DELEGATION_HEADER = "ERC8004-Delegation";
+export const MAX_CHAIN = 4;
+export const MAX_LIFETIME = 30 * 86400;
+const TOKEN_FIELDS = ["from", "methods", "nonce", "not_after", "scope", "signature", "to"];   // sorted
+
+export function normalizeScope(scope) {
+  scope = String(scope ?? "").trim();
+  if (scope === "*") return scope;
+  const norm = normalizeUrl(scope);
+  if (norm.includes("?")) throw new AuthError("a delegation scope is a URL prefix without a query string");
+  return norm;
+}
+
+export function normalizeMethods(methods) {
+  if (methods === undefined || methods === null || methods === "" || methods === "*" ||
+      (Array.isArray(methods) && methods.length === 1 && methods[0] === "*")) return "*";
+  const items = Array.isArray(methods) ? methods : String(methods).split(",");
+  const out = [...new Set(items.map((m) => String(m).trim().toUpperCase()).filter(Boolean))].sort();
+  if (!out.length || !out.every((m) => /^[A-Z]{1,16}$/.test(m))) throw new AuthError("methods must be HTTP methods such as GET,POST or *");
+  return out.join(",");
+}
+
+export function delegationMessage(d) {
+  const frm = parseAgent(d.from), to = parseAgent(d.to);
+  if (!NONCE_RE.test(String(d.nonce ?? ""))) throw new AuthError("delegation nonce must be 16-128 characters from A-Z a-z 0-9 - _");
+  if (!Number.isSafeInteger(d.not_after) || d.not_after < 0) throw new AuthError("not_after must be unix seconds");
+  return [DELEGATION_PROTOCOL, `from: ${agentRef(frm.chainId, frm.agentId)}`, `to: ${agentRef(to.chainId, to.agentId)}`,
+    `scope: ${normalizeScope(d.scope)}`, `methods: ${normalizeMethods(d.methods)}`, `not-after: ${d.not_after}`,
+    `nonce: ${d.nonce}`].join("\n");
+}
+
+const b64url = (bytes) => encodeBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+export function encodeToken(d) {
+  // Sorted keys, compact JSON: byte-identical to the Python library.
+  const body = "{" + TOKEN_FIELDS.map((k) => JSON.stringify(k) + ":" + JSON.stringify(d[k])).join(",") + "}";
+  return b64url(toUtf8Bytes(body));
+}
+
+export function decodeToken(token) {
+  token = String(token ?? "").trim();
+  if (!token || token.length > 2048 || !/^[A-Za-z0-9_-]+$/.test(token)) throw new AuthError("malformed delegation token");
+  let d;
+  try {
+    const b64 = token.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (token.length % 4)) % 4);
+    d = JSON.parse(toUtf8String(decodeBase64(b64)));
+  } catch { throw new AuthError("malformed delegation token"); }
+  if (!d || typeof d !== "object" || Array.isArray(d) || Object.keys(d).sort().join() !== TOKEN_FIELDS.join()) {
+    throw new AuthError("delegation token must hold exactly: from, to, scope, methods, not_after, nonce, signature");
+  }
+  if (!Number.isSafeInteger(d.not_after) || typeof d.signature !== "string") throw new AuthError("malformed delegation token");
+  return d;
+}
+
+/** A delegation token from `fromAgent` (signed by its registered wallet or owner) to `toAgent`. */
+export async function signDelegation(signer, fromAgent, toAgent, { scope = "*", methods = "*", lifetime = 3600, notAfter,
+  nonce, now } = {}) {
+  now = Math.trunc(now ?? Date.now() / 1000);
+  const notAfterS = Math.trunc(notAfter ?? now + lifetime);
+  if (notAfterS - now > MAX_LIFETIME) throw new AuthError("a delegation may last at most 30 days");
+  const f = parseAgent(fromAgent), t = parseAgent(toAgent);
+  const d = { from: agentRef(f.chainId, f.agentId), to: agentRef(t.chainId, t.agentId), scope: normalizeScope(scope),
+    methods: normalizeMethods(methods), not_after: notAfterS, nonce: nonce ?? randomNonce() };
+  const wallet = typeof signer === "string" ? new Wallet(signer) : signer;
+  d.signature = await wallet.signMessage(delegationMessage(d));
+  return encodeToken(d);
+}
+
+export const joinChain = (tokens) => tokens.join(",");
+
+export function scopeAllows(scope, url) {
+  if (scope === "*") return true;
+  const target = normalizeUrl(url);
+  if (!target.startsWith(scope)) return false;
+  const rest = target.slice(scope.length);
+  return scope.endsWith("/") || rest === "" || rest[0] === "/" || rest[0] === "?";
+}
+
 const fail = (reason, extra = {}) => ({ ok: false, reason, checks: [], ...extra });
 
 export class Verifier {
@@ -194,7 +281,7 @@ export class Verifier {
    * const result = await verifier.verify(req.headers, req.method, fullUrl, rawBody)
    */
   constructor({ rpcUrls = {}, registries = {}, nonceStore, allowOwner = true, maxSkew = MAX_SKEW, protocol = PROTOCOL,
-    clock = () => Date.now() / 1000 } = {}) {
+    clock = () => Date.now() / 1000, isRevoked } = {}) {
     this.registries = new Map(Object.entries(registries).map(([c, r]) => [String(BigInt(c)), r]));
     for (const [c, url] of Object.entries(rpcUrls)) {
       if (!this.registries.has(String(BigInt(c)))) this.registries.set(String(BigInt(c)), new IdentityRegistry({ rpcUrl: url }));
@@ -204,6 +291,7 @@ export class Verifier {
     this.maxSkew = Math.min(Math.trunc(maxSkew), MAX_SKEW);
     this.protocol = protocol;
     this.clock = clock;
+    this.isRevoked = isRevoked;   // optional: (delegation) => boolean | Promise<boolean>
   }
 
   async verify(headers, method, url, body = "") {
@@ -245,11 +333,59 @@ export class Verifier {
         { ...base, signer, checks });
     }
     checks.push(`signed by the agent's ${role === "agent_wallet" ? "verified agent wallet" : "owner"}`);
+    let principal = null, delegationChain = [];
+    const chainHeader = readDelegation(headers);
+    if (chainHeader) {
+      try {
+        ({ principal, path: delegationChain } = await this.#verifyChain(chainHeader, ref, method, url, now));
+      } catch (err) {
+        if (err instanceof AuthError) return fail(`delegation: ${err.message}`, { ...base, signer, role, checks });
+        if (err instanceof RpcError) return fail(`could not read the registry: ${err.message}`, { ...base, signer, role, checks });
+        throw err;
+      }
+      checks.push(`acting for ${principal} through ${delegationChain.length - 1} signed delegation(s)`);
+    }
     if (!(await this.nonces.use(`${ref}|${h.nonce}`, now))) {
       return fail("nonce already used (replay blocked)", { ...base, signer, role, checks });
     }
     checks.push("nonce is new");
-    return { ok: true, reason: "verified", ...base, signer, role, checks };
+    return { ok: true, reason: "verified", ...base, signer, role, checks, principal, delegationChain };
+  }
+
+  async #verifyChain(header, requester, method, url, now) {
+    const tokens = header.split(",").map((t) => t.trim()).filter(Boolean);
+    if (!tokens.length) throw new AuthError("empty delegation header");
+    if (tokens.length > MAX_CHAIN) throw new AuthError(`chains are limited to ${MAX_CHAIN} delegations`);
+    const hops = tokens.map(decodeToken);
+    method = String(method ?? "").toUpperCase();
+    const ref = (s) => { const p = parseAgent(s); return agentRef(p.chainId, p.agentId); };
+    for (let i = 0; i < hops.length; i++) {
+      const d = hops[i], n = i + 1;
+      const message = delegationMessage(d);
+      const frm = ref(d.from), to = ref(d.to);
+      const next = i === hops.length - 1 ? requester : ref(hops[i + 1].from);
+      if (to !== next) throw new AuthError(`hop ${n} delegates to ${to}, but the next agent is ${next}`);
+      if (frm === to) throw new AuthError(`hop ${n} delegates an agent to itself`);
+      if (d.not_after < now) throw new AuthError(`hop ${n} expired`);
+      if (d.not_after - now > MAX_LIFETIME) throw new AuthError(`hop ${n} lasts longer than 30 days`);
+      if (!scopeAllows(normalizeScope(d.scope), url)) throw new AuthError(`hop ${n} does not cover this URL`);
+      const methods = normalizeMethods(d.methods);
+      if (methods !== "*" && !methods.split(",").includes(method)) throw new AuthError(`hop ${n} does not allow ${method}`);
+      if (this.isRevoked && (await this.isRevoked(d))) throw new AuthError(`hop ${n} was revoked`);
+      const p = parseAgent(frm);
+      const registry = this.registries.get(p.chainId.toString());
+      if (!registry) throw new AuthError(`no RPC configured for chain ${p.chainId}`);
+      const owner = await registry.ownerOf(p.agentId);
+      if (!owner) throw new AuthError(`hop ${n}: ${frm} does not exist in the Identity Registry`);
+      if (!SIG_RE.test(d.signature) || d.signature.length % 2 || d.signature.length > 2 + 2 * 4096) {
+        throw new AuthError(`hop ${n}: malformed signature`);
+      }
+      const { role } = await this.#match(registry, message, d.signature, await registry.agentWallet(p.agentId), owner);
+      if (!role) throw new AuthError(`hop ${n} was not signed by ${frm}'s registered wallet${this.allowOwner ? " or owner" : ""}`);
+    }
+    const path = [...hops.map((d) => ref(d.from)), requester];
+    if (new Set(path).size !== path.length) throw new AuthError("the chain visits the same agent twice");
+    return { principal: path[0], path };
   }
 
   async #match(registry, message, signature, wallet, owner) {

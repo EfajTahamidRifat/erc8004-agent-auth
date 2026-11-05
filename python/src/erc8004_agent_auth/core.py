@@ -13,6 +13,7 @@ from eth_utils import to_checksum_address
 from .message import (HEADERS, MAX_SKEW, NONCE_RE, NONCE_TTL, PROTOCOL, SIG_RE, AuthError, agent_ref,
                       body_sha256, canonical_message, parse_agent)
 from .registry import IdentityRegistry, RpcError
+from . import delegation as dlg
 
 
 # ── agent side ──────────────────────────────────────────────────────
@@ -64,6 +65,8 @@ class Result:
     signer: str | None = None
     role: str | None = None              # "agent_wallet" | "owner"
     checks: list = field(default_factory=list)
+    principal: str | None = None         # with a delegation chain: the agent the request is ultimately for
+    delegation_chain: list = field(default_factory=list)   # root first, ending with the calling agent
 
     def __bool__(self):
         return self.ok
@@ -73,6 +76,12 @@ def read_headers(headers) -> dict:
     """Case-insensitive lookup of the four headers from any mapping (dict, Flask/Django/Starlette headers)."""
     lower = {str(k).lower(): v for k, v in dict(headers or {}).items()}
     return {key: (str(lower[name.lower()]) if name.lower() in lower else None) for key, name in HEADERS.items()}
+
+
+def read_delegation(headers) -> str | None:
+    lower = {str(k).lower(): v for k, v in dict(headers or {}).items()}
+    value = lower.get(dlg.DELEGATION_HEADER.lower())
+    return str(value) if value else None
 
 
 class Verifier:
@@ -85,7 +94,8 @@ class Verifier:
     """
 
     def __init__(self, rpc_urls: dict | None = None, *, registries: dict | None = None, nonce_store=None,
-                 allow_owner: bool = True, max_skew: int = MAX_SKEW, protocol: str = PROTOCOL, clock=time.time):
+                 allow_owner: bool = True, max_skew: int = MAX_SKEW, protocol: str = PROTOCOL, clock=time.time,
+                 is_revoked=None):
         self.registries = dict(registries or {})
         for chain_id, url in (rpc_urls or {}).items():
             self.registries.setdefault(int(chain_id), IdentityRegistry(url))
@@ -94,6 +104,7 @@ class Verifier:
         self.max_skew = min(int(max_skew), MAX_SKEW)
         self.protocol = protocol
         self.clock = clock
+        self.is_revoked = is_revoked     # optional: callable(delegation dict) -> bool, e.g. a deny-list of nonces
 
     def verify(self, headers, method: str, url: str, body=b"") -> Result:
         h = read_headers(headers)
@@ -139,10 +150,69 @@ class Verifier:
             return Result(False, "signature was not made by the agent's registered wallet"
                           + (" or owner" if self.allow_owner else ""), **base, signer=signer, checks=checks)
         checks.append("signed by the agent's " + ("verified agent wallet" if role == "agent_wallet" else "owner"))
+        principal, path = None, []
+        chain_header = read_delegation(headers)
+        if chain_header:
+            try:
+                principal, path = self._verify_chain(chain_header, ref, method, url, now)
+            except dlg.AuthError as exc:
+                return Result(False, f"delegation: {exc}", **base, signer=signer, role=role, checks=checks)
+            except RpcError as exc:
+                return Result(False, f"could not read the registry: {exc}", **base, signer=signer, role=role,
+                              checks=checks)
+            checks.append(f"acting for {principal} through {len(path) - 1} signed delegation(s)")
         if not self.nonces.use(f"{ref}|{h['nonce']}", now):
             return Result(False, "nonce already used (replay blocked)", **base, signer=signer, role=role, checks=checks)
         checks.append("nonce is new")
-        return Result(True, "verified", **base, signer=signer, role=role, checks=checks)
+        return Result(True, "verified", **base, signer=signer, role=role, checks=checks, principal=principal,
+                      delegation_chain=path)
+
+    def _verify_chain(self, header: str, requester: str, method: str, url: str, now: int):
+        """Check every hop of a delegation chain. Returns (principal, [root, ..., requester])."""
+        tokens = [t.strip() for t in header.split(",") if t.strip()]
+        if not tokens:
+            raise dlg.AuthError("empty delegation header")
+        if len(tokens) > dlg.MAX_CHAIN:
+            raise dlg.AuthError(f"chains are limited to {dlg.MAX_CHAIN} delegations")
+        hops = [dlg.decode_token(t) for t in tokens]
+        method = str(method or "").upper()
+        for i, d in enumerate(hops):
+            message = dlg.delegation_message(d)          # validates and normalizes every field
+            frm = agent_ref(*parse_agent(d["from"]))
+            to = agent_ref(*parse_agent(d["to"]))
+            nxt = requester if i == len(hops) - 1 else agent_ref(*parse_agent(hops[i + 1]["from"]))
+            if to != nxt:
+                raise dlg.AuthError(f"hop {i + 1} delegates to {to}, but the next agent is {nxt}")
+            if frm == to:
+                raise dlg.AuthError(f"hop {i + 1} delegates an agent to itself")
+            if d["not_after"] < now:
+                raise dlg.AuthError(f"hop {i + 1} expired")
+            if d["not_after"] - now > dlg.MAX_LIFETIME:
+                raise dlg.AuthError(f"hop {i + 1} lasts longer than 30 days")
+            if not dlg.scope_allows(dlg.normalize_scope(d["scope"]), url):
+                raise dlg.AuthError(f"hop {i + 1} does not cover this URL")
+            methods = dlg.normalize_methods(d["methods"])
+            if methods != "*" and method not in methods.split(","):
+                raise dlg.AuthError(f"hop {i + 1} does not allow {method}")
+            if self.is_revoked and self.is_revoked(d):
+                raise dlg.AuthError(f"hop {i + 1} was revoked")
+            chain_id, agent_id = parse_agent(frm)
+            registry = self.registries.get(chain_id)
+            if registry is None:
+                raise dlg.AuthError(f"no RPC configured for chain {chain_id}")
+            owner = registry.owner_of(agent_id)
+            if owner is None:
+                raise dlg.AuthError(f"hop {i + 1}: {frm} does not exist in the Identity Registry")
+            if not SIG_RE.match(d["signature"]) or len(d["signature"]) % 2 or len(d["signature"]) > 2 + 2 * 4096:
+                raise dlg.AuthError(f"hop {i + 1}: malformed signature")
+            _signer, role = self._match(registry, message, d["signature"], registry.agent_wallet(agent_id), owner)
+            if not role:
+                raise dlg.AuthError(f"hop {i + 1} was not signed by {frm}'s registered wallet"
+                                    + (" or owner" if self.allow_owner else ""))
+        path = [agent_ref(*parse_agent(d["from"])) for d in hops] + [requester]
+        if len(set(path)) != len(path):
+            raise dlg.AuthError("the chain visits the same agent twice")
+        return path[0], path
 
     def _match(self, registry, message: str, signature: str, wallet, owner):
         candidates = [("agent_wallet", wallet)] + ([("owner", owner)] if self.allow_owner else [])

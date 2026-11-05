@@ -29,3 +29,25 @@ for n, c in enumerate(CASES):
 path = pathlib.Path(__file__).resolve().parents[2] / "vectors" / "v1.json"
 path.write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
 print("wrote", path)
+
+# ── delegation vectors ───────────────────────────────────────────────
+from erc8004_agent_auth import decode_token, sign_delegation
+from erc8004_agent_auth.delegation import delegation_message
+
+DCASES = [
+    dict(key=0, frm="eip155:8453:1203", to="eip155:8453:77", scope="https://API.example.com:443/v1/", methods="post,get", not_after=1767229200),
+    dict(key=1, frm="eip155:8453:77", to="eip155:1:7", scope="*", methods="*", not_after=1767232800),
+]
+dout = {"protocol": "erc8004-delegation/1", "note": "Public test keys only. Tokens are base64url JSON without padding.",
+        "delegations": []}
+for n, c in enumerate(DCASES):
+    nonce = f"delegation-nonce-{n:04d}"
+    tok = sign_delegation(KEYS[c["key"]], c["frm"], c["to"], c["scope"], c["methods"], not_after=c["not_after"],
+                          nonce=nonce, now=c["not_after"] - 3600)
+    d = decode_token(tok)
+    dout["delegations"].append({"private_key": KEYS[c["key"]], "address": Account.from_key(KEYS[c["key"]]).address,
+                                "input": {**{k: v for k, v in c.items() if k != "key"}, "nonce": nonce},
+                                "message": delegation_message(d), "token": tok, "decoded": d})
+dpath = pathlib.Path(__file__).resolve().parents[2] / "vectors" / "delegation-v1.json"
+dpath.write_text(json.dumps(dout, indent=2, ensure_ascii=False) + "\n")
+print("wrote", dpath)

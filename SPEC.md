@@ -91,3 +91,43 @@ and validation records, your own rules and limits.
 
 `vectors/v1.json` contains fixed keys, requests, messages and signatures. Every implementation must reproduce
 them exactly.
+
+## 8. Delegation chains — `erc8004-delegation/1`
+
+When agent A hands a task to agent B, B can prove it acts for A. A **delegation** is a statement signed by the
+delegating agent's registered wallet (or owner, if the verifier allows owners), with the same EIP-191 / ERC-1271
+rules as requests. UTF-8, lines joined with `\n`, no trailing newline:
+
+```
+erc8004-delegation/1
+from: eip155:<chainId>:<agentId>        (the delegating agent)
+to: eip155:<chainId>:<agentId>          (the agent allowed to act for it)
+scope: <URL prefix, normalized as in §3 and without a query, or *>
+methods: <upper-case HTTP methods, sorted, comma-separated, or *>
+not-after: <unix seconds>
+nonce: <16-128 characters from A-Z a-z 0-9 - _>
+```
+
+**Token.** A delegation travels as base64url (no padding) of compact JSON with exactly these keys, sorted:
+`{"from","methods","nonce","not_after","scope","signature","to"}` — `not_after` an integer, `signature` 0x-hex.
+
+**Header.** The calling agent signs its request as usual (§2–3) and adds
+`ERC8004-Delegation: <token>,<token>,…` — one token per hop, **root first**.
+
+**Verification.** In addition to §4, a verifier MUST reject the request unless:
+
+1. There are 1–4 tokens, each well-formed.
+2. Each token's `to` equals the next token's `from`; the last `to` equals `ERC8004-Agent`. No agent appears twice,
+   and no token delegates an agent to itself.
+3. For every token: `now ≤ not-after ≤ now + 30 days`; the request URL starts with `scope` at a path boundary
+   (`scope` ends with `/`, or the next character is `/` or `?`, or the URL equals it); the request method is in
+   `methods`.
+4. Every token is signed by its `from` agent's `getAgentWallet` (or `ownerOf`, if allowed), read from the
+   Identity Registry on that agent's chain.
+5. The request nonce is recorded only after all of the above pass.
+
+The **principal** is the first token's `from`: the agent the request is ultimately made for. Delegations are
+capabilities, reusable until `not-after`; keep them short. Verifiers MAY keep a deny-list of revoked delegation
+nonces (the reference libraries accept an `is_revoked` / `isRevoked` hook).
+
+Test vectors: `vectors/delegation-v1.json`.
